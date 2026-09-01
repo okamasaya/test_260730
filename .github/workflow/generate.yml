@@ -1,0 +1,36 @@
+name: Scheduled Problem Generator
+
+on:
+  schedule:
+    # 毎日 00:00, 06:00, 12:00, 18:00 (UTC) に実行（6時間ごと）
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # GitHubの画面から手動実行も可能にする設定
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python main.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add problems.json report.md
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-generate problem and update report" && git push)
